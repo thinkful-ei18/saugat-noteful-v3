@@ -12,13 +12,7 @@ mongoose.connect(MONGODB_URI)
 
   
 
-  .then(() => {
-    return Note.update()
-      .then(results => {
-        console.log(results);
-      })
-      .catch(console.error);
-  })
+ 
   
   .then(() => {
     return mongoose.disconnect()
