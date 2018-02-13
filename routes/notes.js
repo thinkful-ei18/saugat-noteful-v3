@@ -2,17 +2,37 @@
 
 const express = require('express');
 // Create an router instance (aka "mini-app")
+const mongoose = require('mongoose');
+mongoose.Promise = global.Promise;
 const router = express.Router();
-
+const Note = require('../models/note');
+const { MONGODB_URI } = require('../config');
 /* ========== GET/READ ALL ITEM ========== */
 router.get('/notes', (req, res, next) => {
 
   console.log('Get All Notes');
-  res.json([
-    { id: 1, title: 'Temp 1' }, 
-    { id: 2, title: 'Temp 2' }, 
-    { id: 3, title: 'Temp 3' }
-  ]);
+
+  mongoose.connect(MONGODB_URI)
+    .then(() => {
+      const searchTerm = req.query.searchTerm;
+      let filter = {};
+
+      if (searchTerm) {
+        const re = new RegExp(searchTerm, 'i');
+        filter.title = { $regex: re };
+
+      }
+
+      return Note.find(filter)
+        .select('title created')
+        .sort('created')
+        .then(results => {
+          res.json(results);
+        })
+        .catch(err => {
+          next(err);
+        });
+    });
 
 });
 
@@ -20,15 +40,38 @@ router.get('/notes', (req, res, next) => {
 router.get('/notes/:id', (req, res, next) => {
 
   console.log('Get a Note');
-  res.json({ id: 2 });
+  mongoose.connect(MONGODB_URI)
+    .then(() => {
+      const id = req.params.id;
+      return Note.findById(id)
+        .then(results => {
+          res.json(results);
+        })
+        .catch(err => {
+          next(err);
+        });
+    });
 
 });
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/notes', (req, res, next) => {
 
-  console.log('Create a Note');
-  res.location('path/to/new/document').status(201).json({ id: 2 });
+  const { title, content } = req.body;
+  const updateObj = {
+    title,
+    content
+  };
+  mongoose.connect(MONGODB_URI)
+    .then(() => {
+      return Note.create(updateObj)
+        .then(result => {
+          res.json(result);
+        })
+        .catch(err => {
+          next(err);
+        });
+    });
 
 });
 
