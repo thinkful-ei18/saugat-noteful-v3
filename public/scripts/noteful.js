@@ -3,7 +3,30 @@
 
 const noteful = (function () {
 
+  function showSuccessMessage(message) {
+    const el = $('.js-success-message');
+    el.text(message).show();
+    setTimeout(() => el.fadeOut('slow'), 3000);
+  }
+
+  function showFailureMessage(message) {
+    const el = $('.js-error-message');
+    el.text(message).show();
+    setTimeout(() => el.fadeOut('slow'), 3000);
+  }
+
+  function handleErrors(err) {
+    if (err.status === 401) {
+      store.authorized = false;
+      noteful.render();
+    }
+    showFailureMessage(err.responseJSON.message);
+  }
+
   function render() {
+
+    $('.signup-login').toggle(!store.authorized);
+
     const notesList = generateNotesList(store.notes, store.currentNote);
     $('.js-notes-list').html(notesList);
 
@@ -26,7 +49,7 @@ const noteful = (function () {
 
     editForm.find('.js-note-tags-entry').val(() => {
       if (store.currentNote.tags) {
-        return store.currentNote.tags.map(tag => tag._id);
+        return store.currentNote.tags.map(tag => tag.id);
       }
     });
   }
@@ -36,7 +59,7 @@ const noteful = (function () {
    */
   function generateNotesList(list, currNote) {
     const listItems = list.map(item => `
-      <li data-id="${item._id}" class="js-note-element ${currNote._id === item._id ? 'active' : ''}">
+      <li data-id="${item.id}" class="js-note-element ${currNote.id === item.id ? 'active' : ''}">
         <a href="#" class="name js-note-link">${item.title}</a>
         <button class="removeBtn js-note-delete-button">X</button>
         <div class="metadata">
@@ -54,7 +77,7 @@ const noteful = (function () {
       </li>`;
 
     const listItems = list.map(item => `
-      <li data-id="${item._id}" class="js-folder-item ${currQuery.folderId === item._id ? 'active' : ''}">
+      <li data-id="${item.id}" class="js-folder-item ${currQuery.folderId === item.id ? 'active' : ''}">
         <a href="#" class="name js-folder-link">${item.name}</a>
         <button class="removeBtn js-folder-delete">X</button>
       </li>`);
@@ -63,7 +86,7 @@ const noteful = (function () {
   }
 
   function generateFolderSelect(list) {
-    const notes = list.map(item => `<option value="${item._id}">${item.name}</option>`);
+    const notes = list.map(item => `<option value="${item.id}">${item.name}</option>`);
     return '<option value="">Select Folder:</option>' + notes.join('');
   }
 
@@ -74,7 +97,7 @@ const noteful = (function () {
       </li>`;
 
     const listItems = list.map(item => `
-      <li data-id="${item._id}" class="js-tag-item ${currQuery.tagId === item._id ? 'active' : ''}">
+      <li data-id="${item.id}" class="js-tag-item ${currQuery.tagId === item.id ? 'active' : ''}">
         <a href="#" class="name js-tag-link">${item.name}</a>
         <button class="removeBtn js-tag-delete">X</button>
       </li>`);
@@ -82,7 +105,7 @@ const noteful = (function () {
   }
 
   function generateTagsSelect(list) {
-    const notes = list.map(item => `<option value="${item._id}">${item.name}</option>`);
+    const notes = list.map(item => `<option value="${item.id}">${item.name}</option>`);
     return notes.join('');
   }
 
@@ -121,7 +144,8 @@ const noteful = (function () {
         .then((response) => {
           store.currentNote = response;
           render();
-        });
+        })
+        .catch(handleErrors);
     });
   }
 
@@ -135,7 +159,8 @@ const noteful = (function () {
         .then(response => {
           store.notes = response;
           render();
-        });
+        })
+        .catch(handleErrors);
     });
   }
 
@@ -146,16 +171,15 @@ const noteful = (function () {
 
       const editForm = $(event.currentTarget);
       const noteObj = {
-        _id: store.currentNote._id,
+        id: store.currentNote.id,
         title: editForm.find('.js-note-title-entry').val(),
         content: editForm.find('.js-note-content-entry').val(),
         folderId: editForm.find('.js-note-folder-entry').val(),
         tags: editForm.find('.js-note-tags-entry').val()
       };
-      console.log(noteObj);
 
-      if (store.currentNote._id) {
-        api.update(`/v3/notes/${noteObj._id}`, noteObj)
+      if (store.currentNote.id) {
+        api.update(`/v3/notes/${noteObj.id}`, noteObj)
           .then(updateResponse => {
             store.currentNote = updateResponse;
             return api.search('/v3/notes', store.currentQuery);
@@ -163,7 +187,8 @@ const noteful = (function () {
           .then(response => {
             store.notes = response;
             render();
-          });
+          })
+          .catch(handleErrors);
       } else {
         api.create('/v3/notes', noteObj)
           .then(createResponse => {
@@ -173,7 +198,8 @@ const noteful = (function () {
           .then(response => {
             store.notes = response;
             render();
-          });
+          })
+          .catch(handleErrors);
       }
     });
   }
@@ -193,7 +219,7 @@ const noteful = (function () {
 
       api.remove(`/v3/notes/${noteId}`)
         .then(() => {
-          if (noteId === store.currentNote._id) {
+          if (noteId === store.currentNote.id) {
             store.currentNote = {};
           }
           return api.search('/v3/notes', store.currentQuery);
@@ -201,7 +227,8 @@ const noteful = (function () {
         .then(response => {
           store.notes = response;
           render();
-        });
+        })
+        .catch(handleErrors);
     });
   }
 
@@ -222,7 +249,8 @@ const noteful = (function () {
         .then(response => {
           store.notes = response;
           render();
-        });
+        })
+        .catch(handleErrors);
     });
   }
 
@@ -235,12 +263,12 @@ const noteful = (function () {
         .then(() => {
           $('.js-new-folder-entry').val();
           return api.search('/v3/folders');
-        }).then(response => {
+        })
+        .then(response => {
           store.folders = response;
           render();
-        }).catch(err => {
-          $('.js-error-message').text(err.responseJSON.message);
-        });
+        })
+        .catch(handleErrors);
     });
   }
 
@@ -262,11 +290,12 @@ const noteful = (function () {
           const folderPromise = api.search('/v3/folders');
           return Promise.all([notesPromise, folderPromise]);
         })
-        .then( ([notes, folders])  => {
+        .then(([notes, folders]) => {
           store.notes = notes;
           store.folders = folders;
           render();
-        });
+        })
+        .catch(handleErrors);
     });
   }
 
@@ -280,14 +309,14 @@ const noteful = (function () {
       const tagId = getTagIdFromElement(event.currentTarget);
       store.currentQuery.tagId = tagId;
 
-      //TODO; loop over tags, if not a match, then clear
       store.currentNote = {};
 
       api.search('/v3/notes', store.currentQuery)
         .then(response => {
           store.notes = response;
           render();
-        });
+        })
+        .catch(handleErrors);
     });
   }
 
@@ -299,13 +328,12 @@ const noteful = (function () {
       api.create('/v3/tags', { name: newTagName })
         .then(() => {
           return api.search('/v3/tags');
-        }).then(response => {
+        })
+        .then(response => {
           store.tags = response;
           render();
         })
-        .catch(err => {
-          console.error(err);
-        });
+        .catch(handleErrors);
     });
   }
 
@@ -318,7 +346,6 @@ const noteful = (function () {
         store.currentQuery.tagId = null;
       }
 
-      //TODO; loop over tags, if not a match, then clear
       store.currentNote = {};
 
       api.remove(`/v3/tags/${tagId}`)
@@ -332,10 +359,10 @@ const noteful = (function () {
         .then(response => {
           store.notes = response;
           render();
-        });
+        })
+        .catch(handleErrors);
     });
   }
-
 
   function handleSignupSubmit() {
     $('.js-signup-from').on('submit', event => {
@@ -388,7 +415,8 @@ const noteful = (function () {
         })
         .catch(handleErrors);
     });
-  
+  }  
+
   function bindEventListeners() {
     handleNoteItemClick();
     handleNoteSearchSubmit();
@@ -403,14 +431,15 @@ const noteful = (function () {
     handleTagClick();
     handleNewTagSubmit();
     handleTagDeleteClick();
+
     handleSignupSubmit();
     handleLoginSubmit();
   }
 
   // This object contains the only exposed methods from this module:
   return {
-    render: render,
-    bindEventListeners: bindEventListeners,
+    render,
+    bindEventListeners
   };
 
 }());
