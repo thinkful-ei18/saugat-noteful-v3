@@ -3,6 +3,8 @@
 const express = require('express');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
+const passport = require('passport');
+const localStrategy = require('./passport/local');
 
 const { PORT, MONGODB_URI } = require('./config');
 
@@ -11,6 +13,10 @@ const notesRouter = require('./routes/notes');
 const folderRouter = require('./routes/folders');
 
 const tagRouter = require('./routes/tags');
+
+const usersRouter = require('./routes/users');
+
+const authRouter = require('./routes/auth');
 
 // Create an Express application
 const app = express();
@@ -30,7 +36,8 @@ app.use(express.json());
 app.use('/v3', notesRouter);
 app.use('/v3', folderRouter);
 app.use('/v3', tagRouter);
-
+app.use('/v3', usersRouter)
+app.use('/v3', authRouter);
 // Catch-all 404
 app.use(function (req, res, next) {
   const err = new Error('Not Found');
