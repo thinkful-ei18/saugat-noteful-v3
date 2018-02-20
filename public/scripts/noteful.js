@@ -26,7 +26,7 @@ const noteful = (function () {
 
     editForm.find('.js-note-tags-entry').val(() => {
       if (store.currentNote.tags) {
-        return store.currentNote.tags.map(tag => tag.id);
+        return store.currentNote.tags.map(tag => tag._id);
       }
     });
   }
@@ -36,7 +36,7 @@ const noteful = (function () {
    */
   function generateNotesList(list, currNote) {
     const listItems = list.map(item => `
-      <li data-id="${item.id}" class="js-note-element ${currNote.id === item.id ? 'active' : ''}">
+      <li data-id="${item._id}" class="js-note-element ${currNote._id === item._id ? 'active' : ''}">
         <a href="#" class="name js-note-link">${item.title}</a>
         <button class="removeBtn js-note-delete-button">X</button>
         <div class="metadata">
@@ -54,7 +54,7 @@ const noteful = (function () {
       </li>`;
 
     const listItems = list.map(item => `
-      <li data-id="${item.id}" class="js-folder-item ${currQuery.folderId === item.id ? 'active' : ''}">
+      <li data-id="${item._id}" class="js-folder-item ${currQuery.folderId === item._id ? 'active' : ''}">
         <a href="#" class="name js-folder-link">${item.name}</a>
         <button class="removeBtn js-folder-delete">X</button>
       </li>`);
@@ -63,7 +63,7 @@ const noteful = (function () {
   }
 
   function generateFolderSelect(list) {
-    const notes = list.map(item => `<option value="${item.id}">${item.name}</option>`);
+    const notes = list.map(item => `<option value="${item._id}">${item.name}</option>`);
     return '<option value="">Select Folder:</option>' + notes.join('');
   }
 
@@ -74,7 +74,7 @@ const noteful = (function () {
       </li>`;
 
     const listItems = list.map(item => `
-      <li data-id="${item.id}" class="js-tag-item ${currQuery.tagId === item.id ? 'active' : ''}">
+      <li data-id="${item._id}" class="js-tag-item ${currQuery.tagId === item._id ? 'active' : ''}">
         <a href="#" class="name js-tag-link">${item.name}</a>
         <button class="removeBtn js-tag-delete">X</button>
       </li>`);
@@ -82,7 +82,7 @@ const noteful = (function () {
   }
 
   function generateTagsSelect(list) {
-    const notes = list.map(item => `<option value="${item.id}">${item.name}</option>`);
+    const notes = list.map(item => `<option value="${item._id}">${item.name}</option>`);
     return notes.join('');
   }
 
@@ -146,15 +146,16 @@ const noteful = (function () {
 
       const editForm = $(event.currentTarget);
       const noteObj = {
-        id: store.currentNote.id,
+        _id: store.currentNote._id,
         title: editForm.find('.js-note-title-entry').val(),
         content: editForm.find('.js-note-content-entry').val(),
         folderId: editForm.find('.js-note-folder-entry').val(),
         tags: editForm.find('.js-note-tags-entry').val()
       };
+      console.log(noteObj);
 
-      if (store.currentNote.id) {
-        api.update(`/v3/notes/${noteObj.id}`, noteObj)
+      if (store.currentNote._id) {
+        api.update(`/v3/notes/${noteObj._id}`, noteObj)
           .then(updateResponse => {
             store.currentNote = updateResponse;
             return api.search('/v3/notes', store.currentQuery);
@@ -192,7 +193,7 @@ const noteful = (function () {
 
       api.remove(`/v3/notes/${noteId}`)
         .then(() => {
-          if (noteId === store.currentNote.id) {
+          if (noteId === store.currentNote._id) {
             store.currentNote = {};
           }
           return api.search('/v3/notes', store.currentQuery);
