@@ -11,11 +11,18 @@ const User = require('../models/user');
 router.post('/users', (req, res, next) => {
   const { fullname, username, password } = req.body;
 
-  const newUser = { fullname, username, password };
+  const requiredFields = ['username', 'password'];
+  const missingField = requiredFields.find(field => !(field in req.body));
 
-  if (!username || !password) {
-    const err = new Error('Username and password fields cannot be blank ');
-    err.status = 400;
+  if (missingField) {
+    const err = new Error(`Missing '${missingField}' in request body`);
+    err.status = 422;
+    return next(err);
+  }
+
+
+  if (!username){
+    const err = new Error('username must be one character long');
     return next(err);
   }
 
