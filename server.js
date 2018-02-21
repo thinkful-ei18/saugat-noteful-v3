@@ -5,6 +5,9 @@ const morgan = require('morgan');
 const mongoose = require('mongoose');
 const passport = require('passport');
 const localStrategy = require('./passport/local');
+const dotenv = require('dotenv').config();
+const jwtStrategy = require('./passport/jwt');
+
 
 const { PORT, MONGODB_URI } = require('./config');
 
@@ -32,12 +35,17 @@ app.use(express.static('public'));
 // Parse request body
 app.use(express.json());
 
+app.use('/v3', usersRouter);
+app.use('/v3', authRouter);
+
+passport.use(localStrategy);
+passport.use(jwtStrategy);
+
 // Mount router on "/api"
 app.use('/v3', notesRouter);
 app.use('/v3', folderRouter);
 app.use('/v3', tagRouter);
-app.use('/v3', usersRouter)
-app.use('/v3', authRouter);
+
 // Catch-all 404
 app.use(function (req, res, next) {
   const err = new Error('Not Found');

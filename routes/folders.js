@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const Folder = require('../models/folder');
 const Note = require('../models/note');
 
-
+/* ========== GET/READ ALL ITEMS ========== */
 router.get('/folders', (req, res, next) => {
   Folder.find()
     .sort('name')
@@ -18,7 +18,7 @@ router.get('/folders', (req, res, next) => {
     .catch(next);
 });
 
-
+/* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/folders/:id', (req, res, next) => {
   const { id } = req.params;
 
@@ -39,19 +39,20 @@ router.get('/folders/:id', (req, res, next) => {
     .catch(next);
 });
 
-
+/* ========== POST/CREATE AN ITEM ========== */
 router.post('/folders', (req, res, next) => {
   const { name } = req.body;
 
-  const newFolder = { name };
+  const newItem = { name };
 
+  /***** Never trust users - validate input *****/
   if (!name) {
     const err = new Error('Missing `name` in request body');
     err.status = 400;
     return next(err);
   }
 
-  Folder.create(newFolder)
+  Folder.create(newItem)
     .then(result => {
       res.location(`${req.originalUrl}/${result.id}`).status(201).json(result);
     })
@@ -64,12 +65,12 @@ router.post('/folders', (req, res, next) => {
     });
 });
 
-
+/* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/folders/:id', (req, res, next) => {
   const { id } = req.params;
   const { name } = req.body;
 
-
+  /***** Never trust users - validate input *****/
   if (!name) {
     const err = new Error('Missing `name` in request body');
     err.status = 400;
@@ -82,9 +83,9 @@ router.put('/folders/:id', (req, res, next) => {
     return next(err);
   }
 
-  const updateFolder = { name };
+  const updateItem = { name };
 
-  Folder.findByIdAndUpdate(id, updateFolder, { new: true })
+  Folder.findByIdAndUpdate(id, updateItem, { new: true })
     .then(result => {
       if (result) {
         res.json(result);
@@ -101,19 +102,23 @@ router.put('/folders/:id', (req, res, next) => {
     });
 });
 
-
+/* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/folders/:id', (req, res, next) => {
   const { id } = req.params;
 
+  const folderRemovePromise = Folder.findByIdAndRemove(id); 
 
-  const folderRemovePromise = Folder.findByIdAndRemove({ _id: id });
-  const noteRemovePromise = Note.deleteMany({ folderId: id });
+  const noteRemovePromise = Note.updateMany(
+    { 'tags': id, },
+    { '$pull': { 'tags': id } }
+  );
 
+  // const noteRemovePromise = Note.deleteMany({ folderId: id });
 
   Promise.all([folderRemovePromise, noteRemovePromise])
-    .then(resultsArray => {      
+    .then(resultsArray => {
       const folderResult = resultsArray[0];
-      
+
       if (folderResult) {
         res.status(204).end();
       } else {

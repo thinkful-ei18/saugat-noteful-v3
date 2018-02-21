@@ -1,14 +1,15 @@
 'use strict';
 
 const { Strategy: LocalStrategy } = require('passport-local');
-const User = require('../models/user.js');
 
+const User = require('../models/user');
+
+// ===== Define and create basicStrategy =====
 const localStrategy = new LocalStrategy((username, password, done) => {
   let user;
-  User 
-    .findOne({ username })
-    .then(result => {
-      user = result;
+  User.findOne({ username })
+    .then(results => {
+      user = results;
       if (!user) {
         return Promise.reject({
           reason: 'LoginError',
@@ -28,7 +29,6 @@ const localStrategy = new LocalStrategy((username, password, done) => {
       }
       return done(null, user);
     })
-
     .catch(err => {
       if (err.reason === 'LoginError') {
         return done(null, false);
@@ -36,6 +36,5 @@ const localStrategy = new LocalStrategy((username, password, done) => {
       return done(err);
     });
 });
-
 
 module.exports = localStrategy;

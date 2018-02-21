@@ -1,121 +1,155 @@
 'use strict';
 
 const express = require('express');
-// Create an router instance (aka "mini-app")
+const router = express.Router();
+
 const mongoose = require('mongoose');
 
-const router = express.Router();
 const Note = require('../models/note');
-const { MONGODB_URI } = require('../config');
 
+/* ========== GET/READ ALL ITEMS ========== */
 router.get('/notes', (req, res, next) => {
-  console.log('Hello!');
-  const { searchTerm } = req.query;
+  const { searchTerm, folderId, tagId } = req.query;
 
+  let filter = {};
+  /**
+   * Use RegEx ($regex) Operator to find documents where title contain searchTerm
+   *  title : {$regex: re}
+   * 
+   * BONUS CHALLENGE - Search both title and content using $OR Operator
+   *   filter.$or = [{ 'title': { $regex: re } }, { 'content': { $regex: re } }];
+  */
+  
+  /* if (searchTerm) {
+    const re = new RegExp(searchTerm, 'i');
+    filter.title = { $regex: re };
+  } */
+
+  let projection = {};
+  let sort = 'created'; // default sorting
+
+  // if querying by searchTerm, then add to filter
   if (searchTerm) {
-    Note.find(
-      { $text: { $search: searchTerm } })
-      .populate('tags')
-      .then(response => {
-        return res.json(response);
-      })
-      .catch(err => {
-        return next(err);
-      });
+    filter.$text = { $search: searchTerm };
+    projection.score = { $meta: 'textScore' };
+    sort = projection;
+  }
 
+  // if querying by folder, then add to filter
+  if (folderId) {
+    filter.folderId = folderId;
   }
-  else {
-    Note.find()
-      .populate('tags')
-      .then(response => {
-        res.json(response);
-      })
-      .catch(err => {
-        next(err);
-      });
+
+  // if querying by tags, then add to filter
+  if (tagId) {
+    filter.tags = tagId;
   }
+
+  Note.find(filter, projection)
+    .select('title content created folderId tags')
+    .populate('tags')
+    .sort(sort)
+    .then(results => {
+      res.json(results);
+    })
+    .catch(next);
 });
 
-
+/* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/notes/:id', (req, res, next) => {
-  const id = req.params.id;
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
 
   Note.findById(id)
+    .select('title content created folderId tags')
     .populate('tags')
-    .then(results => {
-      res.json(results);
-    })
-    .catch(err => {
-      next(err);
-    });
-});
-
-
-
-router.post('/notes', (req, res, next) => {
-
-  if (!req.body.title) {
-    const err = new Error('Missing `title` in request body');
-    err.status = 400;
-    return next(err);
-  }
-
-  const { title, content, tags } = req.body;
-  const updateObj = {
-    title,
-    content,
-    tags
-  };
-
-  return Note.create(updateObj)
     .then(result => {
-      return res.status(201).json(result);
+      if (result) {
+        res.json(result);
+      } else {
+        next();
+      }
     })
-    .catch(err => {
-      res.status(422).send(err);
-    });
+    .catch(next);
 });
 
+/* ========== POST/CREATE AN ITEM ========== */
+router.post('/notes', (req, res, next) => {
+  const { title, content, folderId, tags } = req.body;
 
-
-router.put('/notes/:id', (req, res, next) => {
-
-  const id = req.params.id;
-
-  if (!req.body.title) {
+  /***** Never trust users - validate input *****/
+  if (!title) {
     const err = new Error('Missing `title` in request body');
     err.status = 400;
     return next(err);
   }
-  const { title, content } = req.body;
-  const updateObj = {
-    title,
-    content
-  };
 
-  Note.findByIdAndUpdate(id, updateObj)
-    .then(results => {
-      res.json(results);
+  const newItem = { title, content, tags };
+
+  Note.create(newItem)
+    .then(result => {
+      res.location(`${req.originalUrl}/${result.id}`).status(201).json(result);
     })
-    .catch(err => {
-      next(err);
-    });
+    .catch(next);
 });
 
+/* ========== PUT/UPDATE A SINGLE ITEM ========== */
+router.put('/notes/:id', (req, res, next) => {
+  const { id } = req.params;
+  const { title, content, folderId, tags } = req.body;
 
+  /***** Never trust users - validate input *****/
+  if (!title) {
+    const err = new Error('Missing `title` in request body');
+    err.status = 400;
+    return next(err);
+  }
 
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
+  const updateItem = { title, content, tags };
+  
+  if (mongoose.Types.ObjectId.isValid(folderId)) {
+    updateItem.folderId = folderId;
+  }
+
+  const options = { new: true };
+
+  Note.findByIdAndUpdate(id, updateItem, options)
+    .select('id title content folderId tags')
+    .populate('tags')
+    .then(result => {
+      if (result) {
+        res.json(result);
+      } else {
+        next();
+      }
+    })
+    .catch(next);
+});
+
+/* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/notes/:id', (req, res, next) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
   Note.findByIdAndRemove(id)
-    .then(results => {
-      res.status(204).end();
+    .then(count => {
+      if (count) {
+        res.status(204).end();
+      } else {
+        next();
+      }
     })
-    .catch(err => {
-      next(err);
-    });
+    .catch(next);
 });
-
-
 
 module.exports = router;
