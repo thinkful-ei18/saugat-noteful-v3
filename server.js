@@ -24,6 +24,7 @@ const authRouter = require('./routes/auth');
 // Create an Express application
 const app = express();
 
+
 // Log all requests. Skip logging during
 app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'common', {
   skip: () => process.env.NODE_ENV === 'test'
@@ -35,11 +36,14 @@ app.use(express.static('public'));
 // Parse request body
 app.use(express.json());
 
-app.use('/v3', usersRouter);
-app.use('/v3', authRouter);
 
 passport.use(localStrategy);
 passport.use(jwtStrategy);
+
+app.use('/v3', usersRouter);
+app.use('/v3', authRouter);
+
+app.use(passport.authenticate('jwt', { session: false, failWithError: true }));
 
 // Mount router on "/api"
 app.use('/v3', notesRouter);
