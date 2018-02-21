@@ -1,9 +1,10 @@
-/* global $ */
+/* global store $ */
 'use strict';
 
 const api = (function () {
   const search = function(path, query) {
     return $.ajax({
+      headers: { 'Authorization': `Bearer ${store.authToken}` },
       type: 'GET',
       url: path,
       dataType: 'json',
@@ -12,6 +13,7 @@ const api = (function () {
   };
   const details = function(path) {
     return $.ajax({
+      headers: { 'Authorization': `Bearer ${store.authToken}` },
       type: 'GET',
       dataType: 'json',
       url: path,
@@ -19,6 +21,7 @@ const api = (function () {
   };
   const update = function(path, obj) {
     return $.ajax({
+      headers: { 'Authorization': `Bearer ${store.authToken}` },
       type: 'PUT',
       url: path,
       contentType: 'application/json',
@@ -28,6 +31,7 @@ const api = (function () {
   };
   const create = function(path, obj) {
     return $.ajax({
+      headers: { 'Authorization': `Bearer ${store.authToken}` },
       type: 'POST',
       url: path,
       contentType: 'application/json',
@@ -38,6 +42,7 @@ const api = (function () {
   };
   const remove = function(path) {
     return $.ajax({
+      headers: { 'Authorization': `Bearer ${store.authToken}` },
       type: 'DELETE',
       dataType: 'json',
       url: path,
