@@ -12,9 +12,11 @@ const Note = require('../models/note');
 router.get('/folders', (req, res, next) => {
   Folder.find()
     .sort('name')
+  
     .then(results => {
       res.json(results);
     })
+
     .catch(next);
 });
 
